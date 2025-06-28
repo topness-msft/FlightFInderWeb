@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Flight Info</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #f9fafb;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+    }
+    .card {
+      background: #ffffff;
+      border-radius: 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+      max-width: 380px;
+      width: 100%;
+      padding: 20px;
+      text-align: center;
+    }
+    .airplane-img {
+      width: 100%;
+      border-radius: 16px;
+      margin-bottom: 20px;
+    }
+    .info {
+      text-align: left;
+    }
+    .row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .icon {
+      background: #f3f4f6;
+      padding: 10px;
+      border-radius: 12px;
+      font-size: 20px;
+    }
+    .label {
+      font-weight: 600;
+      font-size: 14px;
+      color: #374151;
+    }
+    .value {
+      font-size: 16px;
+      color: #111827;
+    }
+    .error { color: #b00020; text-align: center; margin-top: 2em; }
+    .loading { text-align: center; color: #2a4d69; margin-top: 2em; }
+  </style>
+</head>
+<body>
+  <div class="card" id="flightCard" style="display:none;">
+    <img id="flightImg" src="" alt="Aircraft" class="airplane-img" style="display:none;" />
+    <div class="info">
+      <div class="row">
+        <span class="icon">✈️</span>
+        <div>
+          <div class="label">Airline</div>
+          <div class="value" id="airline"></div>
+        </div>
+      </div>
+      <div class="row">
+        <span class="icon">#️⃣</span>
+        <div>
+          <div class="label">Flight Number</div>
+          <div class="value" id="flightNumber"></div>
+        </div>
+      </div>
+      <div class="row">
+        <span class="icon">🛬</span>
+        <div>
+          <div class="label">Destination</div>
+          <div class="value" id="destination"></div>
+        </div>
+      </div>
+      <div class="row">
+        <span class="icon">🛩️</span>
+        <div>
+          <div class="label">Aircraft</div>
+          <div class="value" id="aircraft"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="loading" class="loading" style="display:none;">Loading...</div>
+  <div id="error" class="error"></div>
+  <script>
+    let apiUrl = "";
+    fetch('config.json')
+      .then(r => r.json())
+      .then(cfg => {
+        apiUrl = cfg.apiUrl;
+        fetchFlightInfo();
+      })
+      .catch(() => { document.getElementById('error').textContent = 'Could not load config.json'; });
+
+    async function fetchFlightInfo() {
+      document.getElementById('flightCard').style.display = 'none';
+      document.getElementById('error').textContent = '';
+      document.getElementById('loading').style.display = 'block';
+      try {
+        if (!apiUrl) throw new Error('API endpoint not loaded.');
+        const payload = {};
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!response.ok) {
+          let errMsg = `HTTP ${response.status}: ${response.statusText}`;
+          try {
+            const errData = await response.json();
+            if (errData && errData.error) errMsg += ` - ${errData.error}`;
+          } catch {}
+          throw new Error(errMsg);
+        }
+        const data = await response.json();
+        let flight = data.flight_details || (data.response && data.response.flight_details);
+        if (!flight) {
+          document.getElementById('error').textContent = "No flight data returned.";
+        } else {
+          document.getElementById('airline').textContent = flight.airline_name || 'Unknown';
+          document.getElementById('flightNumber').textContent = flight.flight_number || 'Unknown';
+          document.getElementById('destination').textContent = (flight.destination_name || 'Unknown') + (flight.destination_city ? ', ' + flight.destination_city : '');
+          document.getElementById('aircraft').textContent = flight.model_name || 'Unknown';
+          if (flight.photo_url) {
+            const img = document.getElementById('flightImg');
+            img.src = flight.photo_url;
+            img.style.display = '';
+          } else {
+            document.getElementById('flightImg').style.display = 'none';
+          }
+          document.getElementById('flightCard').style.display = '';
+        }
+      } catch (err) {
+        document.getElementById('error').textContent = "Error: " + err.message;
+      } finally {
+        document.getElementById('loading').style.display = 'none';
+      }
+    }
+  </script>
+</body>
+</html>
