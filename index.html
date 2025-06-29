@@ -11,7 +11,8 @@
     body {
       font-family: 'Inter', sans-serif;
       background: #f9fafb;
-      padding: 20px;
+      padding: 0; /* Remove extra padding for mobile */
+      margin: 0;
       display: flex;
       justify-content: center;
     } 
@@ -19,15 +20,16 @@
       background: #ffffff;
       border-radius: 20px;
       box-shadow: 0 4px 20px rgba(0,0,0,0.05);
-      max-width: 380px;
+      margin-top: 0;
+      margin-bottom: 0;
+      padding: 14px 8px 16px 8px;
+      max-width: 420px;
       width: 100%;
-      padding: 20px;
-      text-align: center;
     }
     .airplane-img {
       width: 100%;
       border-radius: 16px;
-      margin-bottom: 20px;
+      margin-bottom: 12px;
     } 
     .info {
       text-align: left;
@@ -36,7 +38,7 @@
       display: flex;
       gap: 12px;
       align-items: center;
-      margin-bottom: 20px;
+      margin-bottom: 12px;
     }
     .icon {
       background: #f3f4f6;
@@ -66,40 +68,81 @@
       height: 200px;
       width: 100%;
       border-radius: 12px;
-      margin: 24px 0 0 0;
+      margin: 16px 0 0 0;
+    }
+    /* Split-flap style for the title */
+    @font-face {
+      font-family: 'Skyfont';
+      src: url('skyfont.woff2') format('woff2'),
+           url('skyfont.regular.otf') format('opentype');
+      font-weight: normal;
+      font-style: normal;
+    }
+    .splitflap {
+      font-family: 'Skyfont', 'Courier New', Courier, monospace;
+      color: #111;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+      display: block;
+      overflow: hidden;
+      white-space: nowrap;
+      letter-spacing: 2px;
+      position: relative;
+      width: 100%;
+      height: 44px;
+      line-height: 44px;
+      margin: 0 auto 0 auto;
+      padding: 0 4px;
+      border-radius: 18px;
+      background: #f3f4f6;
+      text-align: center;
+      font-size: 32px;
+      transition: background 0.3s;
+    }
+    .splitflap.bg-invisible {
+      background: none !important;
+    }
+    .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100vw;
+      gap: 4px; /* Reduce gap for tighter vertical spacing */
     }
   </style>
 </head>
 <body>
-  <div class="card" id="flightCard" style="display:none;">
-    <img id="flightImg" src="" alt="Aircraft" class="airplane-img" style="display:none;" />
-    <div class="info">
-      <div class="row">
-        <span class="icon">✈️</span>
-        <div>
-          <div class="label">Flight</div>
-          <div class="value" id="flight"></div>
+    <div class="container">
+      <div class="splitflap" id="splitflapTitle">FLIGHT FINDER</div>
+      <div class="card" id="flightCard" style="display:none;">
+        <img id="flightImg" src="" alt="Aircraft" class="airplane-img" style="display:none;" />
+        <div class="info">
+          <div class="row">
+            <span class="icon">✈️</span>
+            <div>
+              <div class="label">Flight</div>
+              <div class="value" id="flight"></div>
+            </div>
+          </div>
+          <div class="row">
+            <span class="icon">🛬</span>
+            <div>
+              <div class="label">Destination</div>
+              <div class="value" id="destination"></div>
+            </div>
+          </div>
+          <div class="row">
+            <span class="icon">🛩️</span>
+            <div>
+              <div class="label">Aircraft</div>
+              <div class="value" id="aircraft"></div>
+            </div>
+          </div>
         </div>
+        <div id="map"></div>
       </div>
-      <div class="row">
-        <span class="icon">🛬</span>
-        <div>
-          <div class="label">Destination</div>
-          <div class="value" id="destination"></div>
-        </div>
-      </div>
-      <div class="row">
-        <span class="icon">🛩️</span>
-        <div>
-          <div class="label">Aircraft</div>
-          <div class="value" id="aircraft"></div>
-        </div>
-      </div>
+      <div id="loading" class="loading" style="display:none;">Loading...</div>
+      <div id="error" class="error"></div>
     </div>
-    <div id="map"></div>
-  </div>
-  <div id="loading" class="loading" style="display:none;">Loading...</div>
-  <div id="error" class="error"></div>
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <!-- Add Leaflet RotatedMarker plugin -->
   <script src="https://rawcdn.githack.com/bbecquet/Leaflet.RotatedMarker/master/leaflet.rotatedMarker.js"></script>
@@ -136,11 +179,142 @@
         const data = await response.json();
         let flight = data.flight_details || (data.response && data.response.flight_details);
         if (!flight) {
+          setSplitflapBg(false); // Show background on dark screen
           document.body.style.background = "#b3c6e7 url('https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=800&q=80') no-repeat center center fixed";
           document.body.style.backgroundSize = 'cover';
           document.getElementById('error').textContent = "Clear skies overhead";
           document.getElementById('map').style.display = 'none';
         } else {
+          setSplitflapBg(true); // Hide background when data is present
+          document.body.style.background = '#f9fafb';
+          document.body.style.backgroundImage = '';
+          document.getElementById('flight').textContent = ((flight.airline_name || 'Unknown') + ' ' + (flight.flight_number || 'Unknown')).trim();
+          document.getElementById('destination').textContent = (flight.destination_name || 'Unknown') + (flight.destination_city ? ', ' + flight.destination_city : '');
+          document.getElementById('aircraft').textContent = flight.model_name || 'Unknown';
+          if (flight.photo_url) {
+            const img = document.getElementById('flightImg');
+            img.src = flight.photo_url;
+            img.style.display = '';
+          } else {
+            document.getElementById('flightImg').style.display = 'none';
+          }
+          // Show map if lat/lon available
+          let lat = flight.latitude;
+          let lon = flight.longitude;
+          // Use live heading from API
+          let heading = flight.heading;
+          if (lat && lon) {
+            document.getElementById('flightCard').style.display = '';
+            const mapDiv = document.getElementById('map');
+            mapDiv.style.display = '';
+            mapDiv.innerHTML = "";
+            // Wait for browser to render card before initializing map
+            requestAnimationFrame(() => {
+              setTimeout(() => {
+                if (window._leafletMap) {
+                  window._leafletMap.remove();
+                  window._leafletMap = null;
+                }
+                window._leafletMap = L.map('map').setView([lat, lon], 10);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                  attribution: '&copy; OpenStreetMap contributors'
+                }).addTo(window._leafletMap);
+                // Use a custom airplane icon for the marker
+                const airplaneIcon = L.icon({
+                  iconUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><text x="16" y="24" font-size="24" text-anchor="middle" alignment-baseline="middle">✈️</text></svg>',
+                  iconSize: [32, 32],
+                  iconAnchor: [16, 32],
+                  popupAnchor: [0, -32],
+                  className: 'airplane-marker'
+                });
+                // Use rotated marker if heading is available
+                if (typeof heading === 'number' && !isNaN(heading)) {
+                  L.marker([lat, lon], { icon: airplaneIcon, rotationAngle: heading, rotationOrigin: 'center center' }).addTo(window._leafletMap);
+                } else {
+                  L.marker([lat, lon], { icon: airplaneIcon }).addTo(window._leafletMap);
+                }
+                window._leafletMap.invalidateSize();
+              }, 0);
+            });
+          } else {
+            document.getElementById('map').style.display = 'none';
+          }
+        }
+      } catch (err) {
+        document.getElementById('error').textContent = "Error: " + err.message;
+      } finally {
+        document.getElementById('loading').style.display = 'none';
+      }
+    }
+    // Split-flap animation for the title
+    function animateSplitFlap(element, finalText, duration = 1200) {
+      const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789:.-→";
+      const steps = 10;
+      let targetArr = finalText.split("");
+      const maxLen = targetArr.length;
+      let display = Array(maxLen).fill().map(function() { return charset[Math.floor(Math.random() * charset.length)]; });
+      element.textContent = display.join("");
+      let step = 0;
+      let anim = setInterval(function() {
+        display = display.map(function(c, i) {
+          if (step < steps - 1) {
+            return charset[Math.floor(Math.random() * charset.length)];
+          } else {
+            return targetArr[i] || " ";
+          }
+        });
+        element.textContent = display.join("");
+        step++;
+        if (step >= steps) clearInterval(anim);
+      }, duration / steps);
+    }
+    // Animate the title on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      animateSplitFlap(document.getElementById('splitflapTitle'), 'FLIGHT FINDER', 1200);
+    });
+    // Toggle splitflap background based on data
+    function setSplitflapBg(invisible) {
+      var el = document.getElementById('splitflapTitle');
+      if (el) {
+        if (invisible) {
+          el.classList.add('bg-invisible');
+        } else {
+          el.classList.remove('bg-invisible');
+        }
+      }
+    }
+    // Patch into fetchFlightInfo to hide background when data is present
+    const origFetchFlightInfo = fetchFlightInfo;
+    fetchFlightInfo = async function() {
+      document.getElementById('flightCard').style.display = 'none';
+      document.getElementById('error').textContent = '';
+      document.getElementById('loading').style.display = 'block';
+      try {
+        if (!apiUrl) throw new Error('API endpoint not loaded.');
+        const payload = {};
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!response.ok) {
+          let errMsg = `HTTP ${response.status}: ${response.statusText}`;
+          try {
+            const errData = await response.json();
+            if (errData && errData.error) errMsg += ` - ${errData.error}`;
+          } catch {}
+          throw new Error(errMsg);
+        }
+        const data = await response.json();
+        let flight = data.flight_details || (data.response && data.response.flight_details);
+        if (!flight) {
+          setSplitflapBg(false); // Show background on dark screen
+          document.body.style.background = "#b3c6e7 url('https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=800&q=80') no-repeat center center fixed";
+          document.body.style.backgroundSize = 'cover';
+          document.getElementById('error').textContent = "Clear skies overhead";
+          document.getElementById('map').style.display = 'none';
+        } else {
+          setSplitflapBg(true); // Hide background when data is present
           document.body.style.background = '#f9fafb';
           document.body.style.backgroundImage = '';
           document.getElementById('flight').textContent = ((flight.airline_name || 'Unknown') + ' ' + (flight.flight_number || 'Unknown')).trim();
