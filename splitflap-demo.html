@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Airport Split-Flap Font Demo</title>
+  <!-- Use a split-flap style font from Google Fonts or similar -->
+  <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/splitflapjs@1.0.2/dist/splitflap.min.js"></script>
+  <style>
+    @font-face {
+      font-family: 'Skyfont';
+      src: url('skyfont.regular.otf') format('opentype');
+      font-weight: normal;
+      font-style: normal;
+    }
+    body {
+      background: #fff;
+      color: #222;
+      font-family: 'Skyfont', monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .splitflap {
+      /* Remove background and color, let the font handle the tile look */
+      padding: 0.2em 1em;
+      border-radius: 6px;
+      margin-bottom: 1em;
+      font-size: 2.2em;
+      letter-spacing: 0.1em;
+      display: inline-block;
+    }
+    .desc {
+      color: #444;
+      font-size: 1.2em;
+      margin-top: 0.5em;
+      font-family: sans-serif;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="splitflap" id="splitflap">FRANKFURT  FL123  10:45  GATE B12</div>
+  <div class="splitflap" id="splitflap2">LONDON     BA456  11:20  GATE A03</div>
+  <div class="splitflap" id="splitflap3">NEW YORK   DL789  12:05  GATE C07</div>
+  <div class="desc">This uses the free <a href="https://www.1001fonts.com/skyfont-font.html" style="color:#0ff;">Skyfont</a> for a split-flap/flipboard look.<br>
+  For a more authentic look, you can use a commercial split-flap font or a JS/CSS animation library.</div>
+  <script>
+    // Per-character split-flap animation
+    function animateSplitFlap(element, finalText, duration = 1200) {
+      const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789:.-";
+      const steps = 10;
+      let targetArr = finalText.split("");
+      // Always animate to the length of the longest string among all splitflap rows
+      const allRows = [
+        document.getElementById('splitflap').textContent,
+        document.getElementById('splitflap2').textContent,
+        document.getElementById('splitflap3').textContent,
+        finalText
+      ];
+      const maxLen = Math.max(...allRows.map(s => s.length));
+      // Pad targetArr to maxLen
+      while (targetArr.length < maxLen) targetArr.push(' ');
+      let display = Array(maxLen).fill().map(() => charset[Math.floor(Math.random() * charset.length)]);
+      element.textContent = display.join("");
+      let step = 0;
+      let anim = setInterval(() => {
+        display = display.map((c, i) => {
+          if (step < steps - 1) {
+            // Show random char for animation
+            return charset[Math.floor(Math.random() * charset.length)];
+          } else {
+            // Show final char
+            return targetArr[i] || " ";
+          }
+        });
+        element.textContent = display.join("");
+        step++;
+        if (step >= steps) clearInterval(anim);
+      }, duration / steps);
+    }
+    // Animate each splitflap row to its initial value on first load only
+    window.addEventListener('DOMContentLoaded', () => {
+      animateSplitFlap(document.getElementById('splitflap'), 'FRANKFURT  FL123  10:45  GATE B12');
+      animateSplitFlap(document.getElementById('splitflap2'), 'LONDON     BA456  11:20  GATE A03');
+      animateSplitFlap(document.getElementById('splitflap3'), 'NEW YORK   DL789  12:05  GATE C07');
+    });
+  </script>
+</body>
+</html>
